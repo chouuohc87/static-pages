@@ -205,8 +205,8 @@
 </div>
 
 <script>
-    // All Javascript remains the same...
-    let url = null, uiTimeout, msgTimeout, player = null;
+    let url = null;
+    let uiTimeout, msgTimeout, player = null;
     const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
     let rateIdx = 0;
     const video = document.getElementById("video");
@@ -313,12 +313,14 @@
     }
 
     async function loadManual() {
-        let link = prompt("URL:", url || "");
-        if (link) {
-            url = link;
-            location.hash = url;
-            loadPlayer();
+        if (!url) {
+            let link = prompt("URL:", "");
+            if (link) {
+                url = link;
+            }
         }
+        location.hash = url;
+        loadPlayer();
     }
 
     async function loadPlayer() {
