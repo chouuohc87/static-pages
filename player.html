@@ -53,10 +53,26 @@
             transform: translateY(-20px);
         }
         #bottom-controls {
+            position: absolute;
+            left: 0;
+            right: 0;
             bottom: 40px;
+            padding: 20px;
+            display: flex;
+            gap: 12px;
+            transition: all 0.3s ease;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            align-items: center;
             background: linear-gradient(to top, var(--bg-gradient), transparent);
             transform: translateY(40px);
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        #bottom-controls button {
+            flex-shrink: 0;
         }
         .visible {
             opacity: 1 !important;
