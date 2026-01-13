@@ -8,75 +8,50 @@
     <script src="https://unpkg.com/flv.js/dist/flv.min.js"></script>
     <script src="https://unpkg.com/hls.js/dist/hls.min.js"></script>
     <style>
-        :root { --accent: #3ea6ff; }
-        body { background-color: black; margin: 0; font-family: sans-serif; overflow: hidden; color: white; }
+        :root { --accent: #3ea6ff; --bg-gradient: rgba(0,0,0,0.8); }
+        body { background-color: black; margin: 0; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white; -webkit-tap-highlight-color: transparent; }
         
-        #player-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; }
-        
-        video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; 
-            z-index: 1; 
-        }
+        #player-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; object-fit: contain; z-index: 1; }
 
-        /* FORCE MOBILE SEEKBAR VISIBILITY */
-        video::-webkit-media-controls-enclosure {
-            display: flex !important;
-        }
-        video::-webkit-media-controls-timeline {
-            display: flex !important;
-            opacity: 1 !important;
-        }
-
-        #top-bar {
-            position: absolute; top: 0; left: 0; right: 0;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            padding: 15px; display: flex; gap: 8px; transition: opacity 0.3s;
+        /* UI Overlays */
+        #top-bar, #bottom-controls {
+            position: absolute; left: 0; right: 0; padding: 20px; 
+            display: flex; gap: 12px; transition: all 0.3s ease;
             z-index: 10; opacity: 0; pointer-events: none; align-items: center;
         }
-        #top-bar.visible { opacity: 1; pointer-events: auto; }
+        #top-bar { top: 0; background: linear-gradient(to bottom, var(--bg-gradient), transparent); transform: translateY(-20px); }
+        #bottom-controls { bottom: 0; background: linear-gradient(to top, var(--bg-gradient), transparent); transform: translateY(20px); flex-wrap: wrap; }
+        
+        .visible { opacity: 1 !important; pointer-events: auto !important; transform: translateY(0) !important; }
         
         button {
-            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-            color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
+            color: white; border-radius: 50%; width: 42px; height: 42px;
+            display: flex; align-items: center; justify-content: center;
             backdrop-filter: blur(10px); cursor: pointer;
         }
+        .text-btn { border-radius: 8px; width: auto; padding: 0 12px; font-size: 13px; }
 
-        .gesture-layer {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            height: 70%; /* Reduced height slightly to give the native seekbar more "air" */
-            display: flex;
-            z-index: 5;
-            pointer-events: none; /* Allow clicks to pass through to video unless on a zone */
-        }
-        .touch-zone { 
-            height: 100%; 
-            width: 35%; 
-            pointer-events: auto; /* Re-enable for the actual tap areas */
-        }
-        #middle-zone { 
-            flex-grow: 1; 
-            pointer-events: auto; 
-        }
+        /* Time & Seekbar */
+        #seekbar-wrapper { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; margin: 0 10px; }
+        #time-display { font-size: 12px; font-family: monospace; color: #ccc; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); height: 5px; }
+
+        /* Zones */
+        .gesture-layer { position: absolute; top: 0; width: 100%; height: 100%; display: flex; z-index: 5; }
+        .touch-zone { height: 100%; width: 35%; }
+        #middle-zone { flex-grow: 1; }
 
         #message {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 30px;
-            pointer-events: none; visibility: hidden; z-index: 20;
-            font-weight: bold;
+            background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px;
+            pointer-events: none; opacity: 0; z-index: 20; transition: opacity 0.2s;
         }
 
         #interaction-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 100; display: none;
-            flex-direction: column; align-items: center; justify-content: center;
-        }
-        .play-btn-big {
-            width: 80px; height: 80px; background: var(--accent); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; 
+            display: none; flex-direction: column; align-items: center; justify-content: center;
         }
     </style>
 </head>
@@ -84,117 +59,170 @@
 
 <div id="player-container">
     <div id="top-bar">
-        <button onclick="loadManual()">Open Link</button>
-        <button onclick="cycleSpeed()">Speed: <span id="speed-text">1x</span></button>
-        <button onclick="copyURL()">Copy URL</button>
-        <button onclick="location.reload()">Reload</button>
+        <button class="text-btn" onclick="loadManual()">URL</button>
+        <button class="text-btn" onclick="location.reload()">Reload</button>
     </div>
 
     <div class="gesture-layer">
-        <div id="left-zone" class="touch-zone" ontouchend="handleTap(event, 'left')" onclick="handleTap(event, 'left')"></div>
+        <div class="touch-zone" onclick="handleTap(event, 'left')"></div>
         <div id="middle-zone" onclick="toggleUI()"></div>
-        <div id="right-zone" class="touch-zone" ontouchend="handleTap(event, 'right')" onclick="handleTap(event, 'right')"></div>
+        <div class="touch-zone" onclick="handleTap(event, 'right')"></div>
     </div>
     
-    <video id="video" playsinline controls controlsList="nodownload noremoteplayback"></video>
+    <video id="video" playsinline></video>
     
+    <div id="bottom-controls">
+        <button onclick="togglePlay()">
+            <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pause-icon" style="display:none" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        
+        <div id="seekbar-wrapper">
+            <div id="time-display"><span id="curr-time">0:00</span> / <span id="dur-time">0:00</span></div>
+            <input type="range" id="seekbar" value="0" step="0.1">
+        </div>
+
+        <button onclick="toggleMute()">
+            <svg id="vol-on" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+            <svg id="vol-off" style="display:none" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3z"/></svg>
+        </button>
+
+        <button class="text-btn" style="height: 42px;" onclick="cycleSpeed()"><span id="speed-text">1x</span></button>
+
+        <button onclick="toggleFullScreen()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </button>
+    </div>
+
     <div id="message"></div>
 
     <div id="interaction-overlay" onclick="startWithInteraction()">
-        <div class="play-btn-big">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+        <div style="width:70px;height:70px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:15px;">
+            <svg width="35" height="35" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
         </div>
-        <p>Tap to Play & Unmute</p>
+        <b>TAP TO START</b>
     </div>
 </div>
 
 <script>
-    // ... [Rest of your script remains the same] ...
-    let url = null;
-    let uiTimeout, msgTimeout;
-    let playbackRateIndex = 0;
+    let url = null, uiTimeout, msgTimeout, player = null;
     const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
+    let rateIdx = 0;
     const video = document.getElementById("video");
-    const topBar = document.getElementById("top-bar");
-    const overlay = document.getElementById("interaction-overlay");
-    let player = null;
+    const seekbar = document.getElementById("seekbar");
 
-    window.onload = () => {
-        if(location.hash) {
-            url = location.hash.slice(1);
-            loadPlayer();
+    function formatTime(s) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = Math.floor(s % 60);
+        return h > 0 ? `${h}:${m < 10 ? '0'+m : m}:${sec < 10 ? '0'+sec : sec}` : `${m}:${sec < 10 ? '0'+sec : sec}`;
+    }
+
+    function togglePlay() {
+        if (video.paused) {
+            video.play();
+            document.getElementById("interaction-overlay").style.display = "none";
         } else {
-            loadManual();
+            video.pause();
         }
-    };
-
-    function toggleUI() {
-        topBar.classList.toggle('visible');
-        if (topBar.classList.contains('visible')) resetUITimer();
+        updateUIState();
+        resetUITimer();
     }
 
-    function resetUITimer() {
-        clearTimeout(uiTimeout);
-        uiTimeout = setTimeout(() => topBar.classList.remove('visible'), 3500);
+    function updateUIState() {
+        document.getElementById("play-icon").style.display = video.paused ? "block" : "none";
+        document.getElementById("pause-icon").style.display = video.paused ? "none" : "block";
+        document.getElementById("vol-on").style.display = video.muted ? "none" : "block";
+        document.getElementById("vol-off").style.display = video.muted ? "block" : "none";
     }
 
-    function overlayMessage(msg) {
-        const m = document.getElementById("message");
-        m.innerHTML = msg;
-        m.style.visibility = "visible";
-        clearTimeout(msgTimeout);
-        msgTimeout = setTimeout(() => m.style.visibility = "hidden", 1500);
+    function toggleMute() {
+        video.muted = !video.muted;
+        updateUIState();
+        overlayMessage(video.muted ? "Muted" : "Unmuted");
     }
 
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    }
+    
     let lastTap = 0;
     function handleTap(e, side) {
-        if (e.type === 'touchend') e.preventDefault();
         const now = Date.now();
         if (now - lastTap < 300) {
             const rect = e.currentTarget.getBoundingClientRect();
-            const touchY = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) - rect.top;
-            const isUpper = touchY < (rect.height / 2);
-            const seconds = isUpper ? 5 : 30;
-            const direction = side === 'right' ? 1 : -1;
-            video.currentTime += (seconds * direction);
-            overlayMessage((side === 'right' ? "Forward " : "Backward ") + seconds + "s");
-            topBar.classList.remove('visible');
+            const isUpper = (e.clientY - rect.top) < (rect.height / 2);
+            const amt = isUpper ? 30 : 5;
+            video.currentTime += (side === 'right' ? amt : -amt);
+            overlayMessage(`${side === 'right' ? '>>' : '<<'} ${amt}s`);
         } else {
             toggleUI();
         }
         lastTap = now;
     }
 
-    async function loadManual() {
-        let link = prompt("Enter Stream URL:", url || "");
-        if (link) { url = link; location.hash = url; loadPlayer(); }
+    video.addEventListener('timeupdate', () => {
+        if (!isNaN(video.duration)) {
+            seekbar.value = (video.currentTime / video.duration) * 100;
+            document.getElementById("curr-time").innerText = formatTime(video.currentTime);
+            document.getElementById("dur-time").innerText = formatTime(video.duration);
+        }
+    });
+
+    seekbar.addEventListener('input', () => {
+        video.currentTime = (seekbar.value / 100) * video.duration;
+    });
+
+    function toggleUI() {
+        const show = !document.getElementById("top-bar").classList.contains('visible');
+        document.getElementById("top-bar").classList.toggle('visible', show);
+        document.getElementById("bottom-controls").classList.toggle('visible', show);
+        if (show) resetUITimer();
+    }
+
+    function resetUITimer() {
+        clearTimeout(uiTimeout);
+        uiTimeout = setTimeout(() => {
+            document.getElementById("top-bar").classList.remove('visible');
+            document.getElementById("bottom-controls").classList.remove('visible');
+        }, 4000);
+    }
+
+    function overlayMessage(msg) {
+        const m = document.getElementById("message");
+        m.innerText = msg;
+        m.style.opacity = "1";
+        clearTimeout(msgTimeout);
+        msgTimeout = setTimeout(() => m.style.opacity = "0", 1000);
     }
 
     function cycleSpeed() {
-        playbackRateIndex = (playbackRateIndex + 1) % rates.length;
-        video.playbackRate = rates[playbackRateIndex];
-        document.getElementById("speed-text").innerText = rates[playbackRateIndex] + "x";
-        overlayMessage("Speed: " + rates[playbackRateIndex] + "x");
-    }
-
-    async function copyURL() {
-        try {
-            await navigator.clipboard.writeText(url);
-            overlayMessage("Link Copied");
-        } catch (e) { overlayMessage("Copy Failed"); }
+        rateIdx = (rateIdx + 1) % rates.length;
+        video.playbackRate = rates[rateIdx];
+        document.getElementById("speed-text").innerText = rates[rateIdx] + "x";
+        resetUITimer();
     }
 
     function startWithInteraction() {
         video.muted = false;
         video.play();
-        overlay.style.display = "none";
+        updateUIState();
+        document.getElementById("interaction-overlay").style.display = "none";
+    }
+
+    async function loadManual() {
+        let link = prompt("URL:", url || "");
+        if (link) {
+            url = link;
+            location.hash = url;
+            loadPlayer();
+        }
     }
 
     async function loadPlayer() {
         if (!url) return;
-        overlayMessage("Loading...");
-        if (player && typeof player.destroy === 'function') player.destroy();
-        
+        if (player && player.destroy) player.destroy();
         const ext = url.split('.').pop().split(/[?#]/)[0].toLowerCase();
         try {
             if (ext === 'flv') {
@@ -206,29 +234,37 @@
                     player = new Hls();
                     player.loadSource(url);
                     player.attachMedia(video);
-                } else { video.src = url; }
+                } else video.src = url;
             } else if (ext === 'mpd') {
                 player = dashjs.MediaPlayer().create();
                 player.initialize(video, url, true);
-            } else {
-                video.src = url;
-            }
-            video.play().catch(() => { overlay.style.display = "flex"; });
-        } catch (e) { overlayMessage("Error loading source"); }
+            } else video.src = url;
+            
+            video.play().then(updateUIState).catch(() => {
+                document.getElementById("interaction-overlay").style.display = "flex";
+            });
+        } catch (e) {
+            overlayMessage("Error");
+        }
     }
 
+    window.onload = () => {
+        if (location.hash) {
+            url = location.hash.slice(1);
+            loadPlayer();
+        } else loadManual();
+    };
+
     window.onkeydown = (e) => {
-        if (e.key === " ") { 
-            e.preventDefault(); 
-            video.paused ? video.play() : video.pause(); 
+        if (e.key === " ") {
+            e.preventDefault();
+            togglePlay();
         }
         if (e.key.toLowerCase() === "f") {
-            if (!document.fullscreenElement) video.requestFullscreen();
-            else document.exitFullscreen();
+            toggleFullScreen();
         }
         if (e.key.toLowerCase() === "m") {
-            video.muted = !video.muted;
-            overlayMessage(video.muted ? "Muted" : "Unmuted");
+            toggleMute();
         }
         if (e.key >= "0" && e.key <= "9") {
             const percentage = parseInt(e.key) * 10;
@@ -242,19 +278,20 @@
             e.preventDefault();
             if (e.key === "ArrowLeft") {
                 video.currentTime -= 5;
-                overlayMessage("Backward 5s");
+                overlayMessage("<< 5s");
             } else if (e.key === "ArrowRight") {
                 video.currentTime += 5;
-                overlayMessage("Forward 5s");
+                overlayMessage(">> 5s");
             } else if (e.key === "ArrowUp") {
                 video.currentTime += 30;
-                overlayMessage("Forward 30s");
+                overlayMessage(">> 30s");
             } else if (e.key === "ArrowDown") {
                 video.currentTime -= 30;
-                overlayMessage("Backward 30s");
+                overlayMessage("<< 30s");
             }
         }
     };
 </script>
+
 </body>
 </html>
