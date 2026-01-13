@@ -19,14 +19,20 @@
             overflow: hidden;
             color: white;
             -webkit-tap-highlight-color: transparent;
+            /* Fix for mobile height */
+            height: 100vh;
+            height: 100svh; 
         }
         #player-container {
             position: relative;
             width: 100vw;
+            /* Use svh to respect browser toolbars */
             height: 100vh;
+            height: 100svh;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
         video {
             width: 100%;
@@ -39,6 +45,8 @@
             left: 0;
             right: 0;
             padding: 20px;
+            /* Account for notch/gesture bars */
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
             display: flex;
             gap: 12px;
             transition: all 0.3s ease;
@@ -51,22 +59,13 @@
             top: 0;
             background: linear-gradient(to bottom, var(--bg-gradient), transparent);
             transform: translateY(-20px);
+            padding-top: calc(20px + env(safe-area-inset-top));
         }
         #bottom-controls {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 120px;
-            padding: 20px;
-            display: flex;
-            gap: 12px;
-            transition: all 0.3s ease;
-            z-index: 10;
-            opacity: 0;
-            pointer-events: none;
-            align-items: center;
+            /* Changed from 120px to 0 to keep it at the bottom */
+            bottom: 0; 
             background: linear-gradient(to top, var(--bg-gradient), transparent);
-            transform: translateY(0px);
+            transform: translateY(20px);
             flex-wrap: nowrap;
             overflow: hidden;
             box-sizing: border-box;
@@ -79,6 +78,7 @@
             pointer-events: auto !important;
             transform: translateY(0) !important;
         }
+        /* Rest of your styles... */
         button {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.1);
