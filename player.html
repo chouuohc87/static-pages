@@ -20,6 +20,15 @@
             z-index: 1; 
         }
 
+        /* FORCE MOBILE SEEKBAR VISIBILITY */
+        video::-webkit-media-controls-enclosure {
+            display: flex !important;
+        }
+        video::-webkit-media-controls-timeline {
+            display: flex !important;
+            opacity: 1 !important;
+        }
+
         #top-bar {
             position: absolute; top: 0; left: 0; right: 0;
             background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
@@ -38,12 +47,20 @@
             position: absolute;
             top: 0;
             width: 100%;
-            height: 80%; 
+            height: 70%; /* Reduced height slightly to give the native seekbar more "air" */
             display: flex;
             z-index: 5;
+            pointer-events: none; /* Allow clicks to pass through to video unless on a zone */
         }
-        .touch-zone { height: 100%; width: 40%; }
-        #middle-zone { flex-grow: 1; }
+        .touch-zone { 
+            height: 100%; 
+            width: 35%; 
+            pointer-events: auto; /* Re-enable for the actual tap areas */
+        }
+        #middle-zone { 
+            flex-grow: 1; 
+            pointer-events: auto; 
+        }
 
         #message {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -79,7 +96,7 @@
         <div id="right-zone" class="touch-zone" ontouchend="handleTap(event, 'right')" onclick="handleTap(event, 'right')"></div>
     </div>
     
-    <video id="video" playsinline controls></video>
+    <video id="video" playsinline controls controlsList="nodownload noremoteplayback"></video>
     
     <div id="message"></div>
 
@@ -92,6 +109,7 @@
 </div>
 
 <script>
+    // ... [Rest of your script remains the same] ...
     let url = null;
     let uiTimeout, msgTimeout;
     let playbackRateIndex = 0;
@@ -238,6 +256,5 @@
         }
     };
 </script>
-
 </body>
 </html>
