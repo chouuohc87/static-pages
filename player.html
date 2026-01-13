@@ -42,16 +42,29 @@
         let overlayMessageTimeout;
         const playbackRates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
         let playbackRateIndex = 1;
-        player = videojs('my-video', {
+        player = videojs("my-video", {
             controls: true,
             autoplay: false,
-            preload: 'auto',
+            preload: "auto",
             fluid: false
         });
         window.onload = loadPlayer;
+        if (screen.orientation) {
+            screen.orientation.addEventListener("change", function() {
+                if (screen.orientation.type.startsWith("landscape")) {
+                    if (!player.isFullscreen()) {
+                        player.requestFullscreen();
+                    }
+                } else if (screen.orientation.type.startsWith("portrait")) {
+                    if (player.isFullscreen()) {
+                        player.exitFullscreen();
+                    }
+                }
+            });
+        }
         window.onkeydown = function(e) {
             let key = e.which || e.keyCode;
-            if (document.activeElement.tagName === 'INPUT') return;
+            if (document.activeElement.tagName === "INPUT") return;
             if (key === 32) {
                 e.preventDefault();
                 player.paused() ? player.play() : player.pause();
