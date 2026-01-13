@@ -1,152 +1,243 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Player</title>
-    <link href="https://unpkg.com/video.js/dist/video-js.min.css" rel="stylesheet" />
-    <script src="https://unpkg.com/video.js/dist/video.min.js"></script>
+    <script src="https://www.unpkg.com/dashjs/dist/dash.mediaplayer.min.js"></script>
+    <script src="https://unpkg.com/flv.js/dist/flv.min.js"></script>
+    <script src="https://unpkg.com/hls.js/dist/hls.min.js"></script>
     <style>
-        body {
-            background-color: black;
-            margin: 0;
-            overflow: hidden;
+        :root { --accent: #3ea6ff; }
+        body { background-color: black; margin: 0; font-family: sans-serif; overflow: hidden; color: white; }
+        
+        #player-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; }
+        
+        video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            z-index: 1; 
         }
-        .video-js {
-            width: 100vw !important;
-            height: 100vh !important;
+
+        #top-bar {
+            position: absolute; top: 0; left: 0; right: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            padding: 15px; display: flex; gap: 8px; transition: opacity 0.3s;
+            z-index: 10; opacity: 0; pointer-events: none; align-items: center;
         }
+        #top-bar.visible { opacity: 1; pointer-events: auto; }
+        
+        button {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+            color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+            backdrop-filter: blur(10px); cursor: pointer;
+        }
+
+        .gesture-layer {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 80%; 
+            display: flex;
+            z-index: 5;
+        }
+        .touch-zone { height: 100%; width: 40%; }
+        #middle-zone { flex-grow: 1; }
+
         #message {
-            visibility: hidden;
-            color: white;
-            text-align: center;
-            font-size: 1.5em;
-            position: fixed;
-            left: 50%;
-            top: 75%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            border-radius: 8px;
-            z-index: 1000;
-            pointer-events: none;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 30px;
+            pointer-events: none; visibility: hidden; z-index: 20;
+            font-weight: bold;
+        }
+
+        #interaction-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 100; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .play-btn-big {
+            width: 80px; height: 80px; background: var(--accent); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
-    <div id="video-container">
-        <video id="my-video" class="video-js"></video>
+
+<div id="player-container">
+    <div id="top-bar">
+        <button onclick="loadManual()">Open Link</button>
+        <button onclick="cycleSpeed()">Speed: <span id="speed-text">1x</span></button>
+        <button onclick="copyURL()">Copy URL</button>
+        <button onclick="location.reload()">Reload</button>
     </div>
+
+    <div class="gesture-layer">
+        <div id="left-zone" class="touch-zone" ontouchend="handleTap(event, 'left')" onclick="handleTap(event, 'left')"></div>
+        <div id="middle-zone" onclick="toggleUI()"></div>
+        <div id="right-zone" class="touch-zone" ontouchend="handleTap(event, 'right')" onclick="handleTap(event, 'right')"></div>
+    </div>
+    
+    <video id="video" playsinline controls></video>
+    
     <div id="message"></div>
-    <script>
-        let url = null;
-        let player = null;
-        let overlayMessageTimeout;
-        const playbackRates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
-        let playbackRateIndex = 1;
-        player = videojs("my-video", {
-            controls: true,
-            autoplay: false,
-            preload: "auto",
-            fluid: false
-        });
-        window.onload = loadPlayer;
-        if (screen.orientation) {
-            screen.orientation.addEventListener("change", function() {
-                if (screen.orientation.type.startsWith("landscape")) {
-                    if (!player.isFullscreen()) {
-                        player.requestFullscreen();
-                    }
-                } else if (screen.orientation.type.startsWith("portrait")) {
-                    if (player.isFullscreen()) {
-                        player.exitFullscreen();
-                    }
-                }
-            });
-        }
-        window.onkeydown = function(e) {
-            let key = e.which || e.keyCode;
-            if (document.activeElement.tagName === "INPUT") return;
-            if (key === 32) {
-                e.preventDefault();
-                player.paused() ? player.play() : player.pause();
-                overlayMessage(player.paused() ? "Paused" : "Playing");
-            } 
-            else if ([37, 39].indexOf(key) > -1) {
-                e.preventDefault();
-                let skip = e.ctrlKey ? 120 : 5;
-                let direction = (key === 39) ? 1 : -1;
-                player.currentTime(player.currentTime() + (direction * skip));
-                displayTime();
-            }
-            else if ([38, 40].indexOf(key) > -1) {
-                e.preventDefault();
-                let skip = e.ctrlKey ? 300 : 20;
-                let direction = (key === 38) ? 1 : -1;
-                player.currentTime(player.currentTime() + (direction * skip));
-                displayTime();
-            }
-            else if (key === 70) {
-                if (!player.isFullscreen()) {
-                    player.requestFullscreen();
-                } else {
-                    player.exitFullscreen();
-                }
-            }
-            else if (key === 76) {
-                let link = prompt("Enter Video Link:", "");
-                if (link) {
-                    url = link;
-                    loadPlayer();
-                }
-            }
-            else if (key === 83) {
-                let newRate = playbackRates[playbackRateIndex++ % playbackRates.length];
-                player.playbackRate(newRate);
-                overlayMessage("Speed: " + newRate + "x");
-            }
-            else if (key === 77) {
-                player.muted(!player.muted());
-                overlayMessage(player.muted() ? "Muted" : "Unmuted");
-            }
-        };
 
-        async function loadPlayer() {
-            if (location.hash.length > 1) {
-                url = location.hash.slice(1);
+    <div id="interaction-overlay" onclick="startWithInteraction()">
+        <div class="play-btn-big">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <p>Tap to Play & Unmute</p>
+    </div>
+</div>
+
+<script>
+    let url = null;
+    let uiTimeout, msgTimeout;
+    let playbackRateIndex = 0;
+    const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
+    const video = document.getElementById("video");
+    const topBar = document.getElementById("top-bar");
+    const overlay = document.getElementById("interaction-overlay");
+    let player = null;
+
+    window.onload = () => {
+        if(location.hash) {
+            url = location.hash.slice(1);
+            loadPlayer();
+        } else {
+            loadManual();
+        }
+    };
+
+    function toggleUI() {
+        topBar.classList.toggle('visible');
+        if (topBar.classList.contains('visible')) resetUITimer();
+    }
+
+    function resetUITimer() {
+        clearTimeout(uiTimeout);
+        uiTimeout = setTimeout(() => topBar.classList.remove('visible'), 3500);
+    }
+
+    function overlayMessage(msg) {
+        const m = document.getElementById("message");
+        m.innerHTML = msg;
+        m.style.visibility = "visible";
+        clearTimeout(msgTimeout);
+        msgTimeout = setTimeout(() => m.style.visibility = "hidden", 1500);
+    }
+
+    let lastTap = 0;
+    function handleTap(e, side) {
+        if (e.type === 'touchend') e.preventDefault();
+        const now = Date.now();
+        if (now - lastTap < 300) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const touchY = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) - rect.top;
+            const isUpper = touchY < (rect.height / 2);
+            const seconds = isUpper ? 5 : 30;
+            const direction = side === 'right' ? 1 : -1;
+            video.currentTime += (seconds * direction);
+            overlayMessage((side === 'right' ? "Forward " : "Backward ") + seconds + "s");
+            topBar.classList.remove('visible');
+        } else {
+            toggleUI();
+        }
+        lastTap = now;
+    }
+
+    async function loadManual() {
+        let link = prompt("Enter Stream URL:", url || "");
+        if (link) { url = link; location.hash = url; loadPlayer(); }
+    }
+
+    function cycleSpeed() {
+        playbackRateIndex = (playbackRateIndex + 1) % rates.length;
+        video.playbackRate = rates[playbackRateIndex];
+        document.getElementById("speed-text").innerText = rates[playbackRateIndex] + "x";
+        overlayMessage("Speed: " + rates[playbackRateIndex] + "x");
+    }
+
+    async function copyURL() {
+        try {
+            await navigator.clipboard.writeText(url);
+            overlayMessage("Link Copied");
+        } catch (e) { overlayMessage("Copy Failed"); }
+    }
+
+    function startWithInteraction() {
+        video.muted = false;
+        video.play();
+        overlay.style.display = "none";
+    }
+
+    async function loadPlayer() {
+        if (!url) return;
+        overlayMessage("Loading...");
+        if (player && typeof player.destroy === 'function') player.destroy();
+        
+        const ext = url.split('.').pop().split(/[?#]/)[0].toLowerCase();
+        try {
+            if (ext === 'flv') {
+                player = flvjs.createPlayer({ type: 'flv', url: url });
+                player.attachMediaElement(video);
+                player.load();
+            } else if (ext === 'm3u8' || url.includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    player = new Hls();
+                    player.loadSource(url);
+                    player.attachMedia(video);
+                } else { video.src = url; }
+            } else if (ext === 'mpd') {
+                player = dashjs.MediaPlayer().create();
+                player.initialize(video, url, true);
+            } else {
+                video.src = url;
             }
+            video.play().catch(() => { overlay.style.display = "flex"; });
+        } catch (e) { overlayMessage("Error loading source"); }
+    }
 
-            if (url) {
-                overlayMessage("Loading...");
-                document.title = url;
-                location.hash = "#" + url;
-                player.src({
-                    src: url,
-                });
-                player.ready(() => {
-                    player.play().catch(e => console.log("Autoplay blocked or error:", e));
-                });
+    window.onkeydown = (e) => {
+        if (e.key === " ") { 
+            e.preventDefault(); 
+            video.paused ? video.play() : video.pause(); 
+        }
+        if (e.key.toLowerCase() === "f") {
+            if (!document.fullscreenElement) video.requestFullscreen();
+            else document.exitFullscreen();
+        }
+        if (e.key.toLowerCase() === "m") {
+            video.muted = !video.muted;
+            overlayMessage(video.muted ? "Muted" : "Unmuted");
+        }
+        if (e.key >= "0" && e.key <= "9") {
+            const percentage = parseInt(e.key) * 10;
+            const newTime = (video.duration * percentage) / 100;
+            if (!isNaN(newTime)) {
+                video.currentTime = newTime;
+                overlayMessage("Seek to " + percentage + "%");
             }
         }
-
-        function overlayMessage(msg) {
-            let x = document.getElementById("message");
-            x.innerHTML = msg;
-            x.style.visibility = "visible";
-            clearTimeout(overlayMessageTimeout);
-            overlayMessageTimeout = setTimeout(() => {
-                x.style.visibility = "hidden";
-            }, 2000);
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+            e.preventDefault();
+            if (e.key === "ArrowLeft") {
+                video.currentTime -= 5;
+                overlayMessage("Backward 5s");
+            } else if (e.key === "ArrowRight") {
+                video.currentTime += 5;
+                overlayMessage("Forward 5s");
+            } else if (e.key === "ArrowUp") {
+                video.currentTime += 30;
+                overlayMessage("Forward 30s");
+            } else if (e.key === "ArrowDown") {
+                video.currentTime -= 30;
+                overlayMessage("Backward 30s");
+            }
         }
+    };
+</script>
 
-        function displayTime() {
-            let current = secondsToTime(player.currentTime());
-            let total = secondsToTime(player.duration());
-            overlayMessage(`${current} / ${total}`);
-        }
-
-        function secondsToTime(secs) {
-            if (isNaN(secs)) return "00:00:00";
-            return new Date(secs * 1000).toISOString().slice(11, 19);
-        }
-    </script>
 </body>
 </html>
