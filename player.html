@@ -314,13 +314,13 @@
 
     async function loadManual() {
         if (!url) {
-            let link = prompt("URL:", "");
-            if (link) {
-                url = link;
-            }
+            url = "";
         }
-        location.hash = url;
-        loadPlayer();
+        let url = prompt("URL:", url);
+        if (url.length) {
+            location.hash = url;
+            loadPlayer();
+        }
     }
 
     async function loadPlayer() {
