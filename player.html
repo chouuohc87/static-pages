@@ -19,14 +19,12 @@
             overflow: hidden;
             color: white;
             -webkit-tap-highlight-color: transparent;
-            /* Fix for mobile height */
             height: 100vh;
             height: 100svh; 
         }
         #player-container {
             position: relative;
             width: 100vw;
-            /* Use svh to respect browser toolbars */
             height: 100vh;
             height: 100svh;
             display: flex;
@@ -45,7 +43,6 @@
             left: 0;
             right: 0;
             padding: 20px;
-            /* Account for notch/gesture bars */
             padding-bottom: calc(20px + env(safe-area-inset-bottom));
             display: flex;
             gap: 12px;
@@ -62,7 +59,6 @@
             padding-top: calc(20px + env(safe-area-inset-top));
         }
         #bottom-controls {
-            /* Changed from 120px to 0 to keep it at the bottom */
             bottom: 0; 
             background: linear-gradient(to top, var(--bg-gradient), transparent);
             transform: translateY(20px);
@@ -78,7 +74,6 @@
             pointer-events: auto !important;
             transform: translateY(0) !important;
         }
-        /* Rest of your styles... */
         button {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -160,7 +155,7 @@
 <div id="player-container">
     <div id="top-bar">
         <button class="text-btn" onclick="loadManual()">URL</button>
-        <button class="text-btn" onclick="location.reload()">Reload</button>
+        <button class="text-btn" onclick="loadPlayer()">Reload</button>
     </div>
 
     <div class="gesture-layer">
