@@ -355,7 +355,11 @@
         if (location.hash) {
             url = location.hash.slice(1);
             loadPlayer();
-        } else loadManual();
+        } else if (url.length) {
+            loadPlayer();
+        } else {
+            loadManual();
+        }
     };
 
     window.onkeydown = (e) => {
