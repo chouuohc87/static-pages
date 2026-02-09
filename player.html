@@ -335,6 +335,8 @@
         if (location.hash) {
             url = location.hash.slice(1);
             loadPlayer();
+        } else if (url) {
+            loadPlayer();
         } else {
             loadManual();
         }
