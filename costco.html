@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>Costco</title>
+	<style type="text/css">
+		:root {
+			--costco-blue: #005da4;
+			--costco-red: #e51937;
+			--bg-gray: #f0f2f5;
+			--text-dark: #1a1a1a;
+			--text-muted: #636e72;
+		}
+		body {
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			background: var(--bg-gray);
+			margin: 0;
+			padding: 20px;
+			color: var(--text-dark);
+		}
+		.container {
+			max-width: 1100px;
+			margin: 0 auto;
+		}
+		.store-card {
+			background: white;
+			border-radius: 12px;
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+			margin-bottom: 30px;
+			border: 1px solid #e1e4e8;
+			overflow: hidden;
+			transition: transform 0.2s ease;
+		}
+		.store-card:hover {
+			transform: translateY(-3px);
+		}
+		.location-header {
+			background: var(--costco-blue);
+			color: white;
+			padding: 20px 25px;
+			border-bottom: 5px solid var(--costco-red);
+		}
+		.header-top h2 {
+			margin: 0;
+			font-size: 1.8rem;
+			font-weight: 800;
+		}
+		.address-link {
+			color: white;
+			text-decoration: none;
+			font-size: 1rem;
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-top: 8px;
+			opacity: 0.9;
+		}
+		.address-link:hover {
+			opacity: 1;
+			text-decoration: underline;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+		}
+		.col {
+			padding: 25px;
+			border-right: 1px solid #eee;
+		}
+		.col:last-child {
+			border-right: none;
+			background: #fafafa;
+		}
+		h3 {
+			margin: 0 0 18px 0;
+			font-size: 0.85rem;
+			text-transform: uppercase;
+			letter-spacing: 1.2px;
+			color: var(--text-muted);
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		h3::before {
+			content: '';
+			width: 4px;
+			height: 15px;
+			background: var(--costco-red);
+			border-radius: 2px;
+		}
+		.hour-row {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 10px;
+			font-size: 0.95rem;
+		}
+		.day-label {
+			font-weight: 600;
+			color: #444;
+		}
+		.price-box {
+			background: white;
+			border: 1px solid #e1e4e8;
+			padding: 15px;
+			border-radius: 10px;
+		}
+		.price-row {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 10px 0;
+			border-bottom: 1px solid #eee;
+		}
+		.price-row:last-child {
+			border-bottom: none;
+		}
+		.amount {
+			font-size: 1.6rem;
+			font-weight: 900;
+			color: var(--costco-red);
+			font-family: 'Courier New', monospace;
+		}
+		@media (max-width: 900px) {
+			.grid {
+				grid-template-columns: 1fr;
+			}
+			.col {
+				border-right: none;
+				border-bottom: 1px solid #eee;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="container" id="output"></div>
+	<script type="text/javascript">
+		const x = document.getElementById("output");
+		if (navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(async (position) => {
+				x.innerHTML = await getCostco(position.coords.latitude, position.coords.longitude);
+			}, (error) => {
+				switch(error.code) {
+					case error.PERMISSION_DENIED:
+					x.innerHTML = "User denied the request for Geolocation."
+					break;
+					case error.POSITION_UNAVAILABLE:
+					x.innerHTML = "Location information is unavailable."
+					break;
+					case error.TIMEOUT:
+					x.innerHTML = "The request to get user location timed out."
+					break;
+					case error.UNKNOWN_ERROR:
+					x.innerHTML = "An unknown error occurred."
+					break;
+				}
+			});
+		} else { 
+			x.innerHTML = "Geolocation is not supported by this browser.";
+		}
+		function getCostco(lat, long) {
+			return fetch(`https://mypage.ydns.eu/costco/${lat}/${long}`, {
+				"headers": {
+					"cache-control": "no-cache",
+					"pragma": "no-cache"
+				}
+			}).then(r=>r.text());
+		}
+	</script>
+</body>
+</html>
