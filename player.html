@@ -140,246 +140,221 @@
     </style>
 </head>
 <body>
-<div id="player-container">
-    <div class="gesture-layer">
-        <div class="touch-zone" onclick="handleTap(event, 'left')"></div>
-        <div id="middle-zone" onclick="toggleUI()"></div>
-        <div class="touch-zone" onclick="handleTap(event, 'right')"></div>
-    </div>
-    
-    <video id="video" playsinline></video>
-
-    <div id="more-menu">
-        <button onclick="loadManual()">
-            <span style="margin-right:10px">🔗</span> URL
-        </button>
-        <button onclick="loadPlayer()">
-            <span style="margin-right:10px">🔄</span> Reload
-        </button>
-        <button onclick="toggleMute()">
-            <span id="mute-label-icon" style="margin-right:10px">🔊</span> Mute/Unmute
-        </button>
-        <button onclick="cycleSpeed()">
-            <span style="margin-right:10px">⚡</span> Speed: <span id="speed-text">1x</span>
-        </button>
-        <button onclick="toggleFullScreen()">
-            <span style="margin-right:10px">⛶</span> Full Screen
-        </button>
-    </div>
-    
-    <div id="bottom-controls">
-        <button onclick="togglePlay()">
-            <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="pause-icon" style="display:none" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
-        
-        <div id="seekbar-wrapper">
-            <div id="time-display"><span id="curr-time">0:00</span> / <span id="dur-time">0:00</span></div>
-            <input type="range" id="seekbar" value="0" step="0.1">
+    <div id="player-container">
+        <div class="gesture-layer">
+            <div class="touch-zone" onclick="handleTap(event, 'left')"></div>
+            <div id="middle-zone" onclick="toggleUI()"></div>
+            <div class="touch-zone" onclick="handleTap(event, 'right')"></div>
         </div>
-
-        <button onclick="toggleSubmenu(event)">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-        </button>
+        <video id="video" playsinline></video>
+        <div id="more-menu">
+            <button onclick="loadManual()">
+                <span style="margin-right:10px">🔗</span> URL
+            </button>
+            <button onclick="loadPlayer()">
+                <span style="margin-right:10px">🔄</span> Reload
+            </button>
+            <button onclick="toggleMute()">
+                <span id="mute-label-icon" style="margin-right:10px">🔊</span> Mute/Unmute
+            </button>
+            <button onclick="cycleSpeed()">
+                <span style="margin-right:10px">⚡</span> Speed: <span id="speed-text">1x</span>
+            </button>
+            <button onclick="toggleFullScreen()">
+                <span style="margin-right:10px">⛶</span> Full Screen
+            </button>
+        </div>
+        <div id="bottom-controls">
+            <button onclick="togglePlay()">
+                <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                <svg id="pause-icon" style="display:none" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <div id="seekbar-wrapper">
+                <div id="time-display"><span id="curr-time">0:00</span> / <span id="dur-time">0:00</span></div>
+                <input type="range" id="seekbar" value="0" step="0.1">
+            </div>
+            <button onclick="toggleSubmenu(event)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </button>
+        </div>
+        <div id="message"></div>
     </div>
-
-    <div id="message"></div>
-</div>
-
-<script>
-    let url = null;
-    let uiTimeout, msgTimeout, player = null;
-    const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
-    let rateIdx = 0;
-    const video = document.getElementById("video");
-    const seekbar = document.getElementById("seekbar");
-
-    function formatTime(s) {
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = Math.floor(s % 60);
-        return h > 0 ? `${h}:${m < 10 ? '0'+m : m}:${sec < 10 ? '0'+sec : sec}` : `${m}:${sec < 10 ? '0'+sec : sec}`;
-    }
-
-    function togglePlay() {
-        if (video.paused) video.play();
-        else video.pause();
-        updateUIState();
-        resetUITimer();
-    }
-
-    function updateUIState() {
-        document.getElementById("play-icon").style.display = video.paused ? "block" : "none";
-        document.getElementById("pause-icon").style.display = video.paused ? "none" : "block";
-        document.getElementById("mute-label-icon").innerText = video.muted ? "🔇" : "🔊";
-    }
-
-    function toggleMute() {
-        video.muted = !video.muted;
-        updateUIState();
-        overlayMessage(video.muted ? "Muted" : "Unmuted");
-    }
-
-    function toggleFullScreen() {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
-        closeSubmenu();
-    }
-
-    function toggleSubmenu(e) {
-        e.stopPropagation();
-        document.getElementById("more-menu").classList.toggle("active");
-        resetUITimer();
-    }
-
-    function closeSubmenu() {
-        document.getElementById("more-menu").classList.remove("active");
-    }
-
-    let lastTap = 0;
-    function handleTap(e, side) {
-        const now = Date.now();
-        if (now - lastTap < 300) {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const isUpper = (e.clientY - rect.top) < (rect.height / 2);
-            const amt = isUpper ? 30 : 5;
-            video.currentTime += (side === 'right' ? amt : -amt);
-            overlayMessage(`${side === 'right' ? '>>' : '<<'} ${amt}s`);
-        } else {
-            toggleUI();
+    <script>
+        let url = null;
+        let uiTimeout, msgTimeout, player = null;
+        const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
+        let rateIdx = 0;
+        const video = document.getElementById("video");
+        const seekbar = document.getElementById("seekbar");
+        function formatTime(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = Math.floor(s % 60);
+            return h > 0 ? `${h}:${m < 10 ? '0'+m : m}:${sec < 10 ? '0'+sec : sec}` : `${m}:${sec < 10 ? '0'+sec : sec}`;
         }
-        lastTap = now;
-    }
-
-    video.addEventListener('timeupdate', () => {
-        if (!isNaN(video.duration)) {
-            seekbar.value = (video.currentTime / video.duration) * 100;
-            document.getElementById("curr-time").innerText = formatTime(video.currentTime);
-            document.getElementById("dur-time").innerText = formatTime(video.duration);
+        function togglePlay() {
+            if (video.paused) video.play();
+            else video.pause();
+            updateUIState();
+            resetUITimer();
         }
-    });
-
-    seekbar.addEventListener('input', () => {
-        video.currentTime = (seekbar.value / 100) * video.duration;
-    });
-
-    function toggleUI() {
-        const controls = document.getElementById("bottom-controls");
-        const show = !controls.classList.contains('visible');
-        controls.classList.toggle('visible', show);
-        if (!show) closeSubmenu();
-        if (show) resetUITimer();
-    }
-
-    function resetUITimer() {
-        clearTimeout(uiTimeout);
-        if (!document.getElementById("more-menu").classList.contains("active")) {
-            uiTimeout = setTimeout(() => {
-                document.getElementById("bottom-controls").classList.remove('visible');
-            }, 4000);
+        function updateUIState() {
+            document.getElementById("play-icon").style.display = video.paused ? "block" : "none";
+            document.getElementById("pause-icon").style.display = video.paused ? "none" : "block";
+            document.getElementById("mute-label-icon").innerText = video.muted ? "🔇" : "🔊";
         }
-    }
-
-    function overlayMessage(msg) {
-        const m = document.getElementById("message");
-        m.innerText = msg;
-        m.style.opacity = "1";
-        clearTimeout(msgTimeout);
-        msgTimeout = setTimeout(() => m.style.opacity = "0", 1000);
-    }
-
-    function cycleSpeed() {
-        rateIdx = (rateIdx + 1) % rates.length;
-        video.playbackRate = rates[rateIdx];
-        document.getElementById("speed-text").innerText = rates[rateIdx] + "x";
-        updateUIState();
-        overlayMessage(document.getElementById("speed-text").innerText);
-    }
-
-    async function loadManual() {
-        closeSubmenu();
-        let input = prompt("Enter Video URL:", url || "");
-        if (input) {
-            url = input;
-            location.hash = url;
-            loadPlayer();
+        function toggleMute() {
+            video.muted = !video.muted;
+            updateUIState();
+            overlayMessage(video.muted ? "Muted" : "Unmuted");
         }
-    }
-
-    async function loadPlayer() {
-        closeSubmenu();
-        if (!url) return;
-        if (player && player.destroy) player.destroy();
-        const ext = url.split('.').pop().split(/[?#]/)[0].toLowerCase();
-        try {
-            if (ext === 'flv') {
-                player = flvjs.createPlayer({ type: 'flv', url: url });
-                player.attachMediaElement(video);
-                player.load();
-            } else if (ext === 'm3u8' || url.includes('.m3u8')) {
-                if (Hls.isSupported()) {
-                    player = new Hls();
-                    player.loadSource(url);
-                    player.attachMedia(video);
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+            closeSubmenu();
+        }
+        function toggleSubmenu(e) {
+            e.stopPropagation();
+            document.getElementById("more-menu").classList.toggle("active");
+            resetUITimer();
+        }
+        function closeSubmenu() {
+            document.getElementById("more-menu").classList.remove("active");
+        }
+        let lastTap = 0;
+        function handleTap(e, side) {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const isUpper = (e.clientY - rect.top) < (rect.height / 2);
+                const amt = isUpper ? 30 : 5;
+                video.currentTime += (side === 'right' ? amt : -amt);
+                overlayMessage(`${side === 'right' ? '>>' : '<<'} ${amt}s`);
+            } else {
+                toggleUI();
+            }
+            lastTap = now;
+        }
+        video.addEventListener('timeupdate', () => {
+            if (!isNaN(video.duration)) {
+                seekbar.value = (video.currentTime / video.duration) * 100;
+                document.getElementById("curr-time").innerText = formatTime(video.currentTime);
+                document.getElementById("dur-time").innerText = formatTime(video.duration);
+            }
+        });
+        seekbar.addEventListener('input', () => {
+            video.currentTime = (seekbar.value / 100) * video.duration;
+        });
+        function toggleUI() {
+            const controls = document.getElementById("bottom-controls");
+            const show = !controls.classList.contains('visible');
+            controls.classList.toggle('visible', show);
+            if (!show) closeSubmenu();
+            if (show) resetUITimer();
+        }
+        function resetUITimer() {
+            clearTimeout(uiTimeout);
+            if (!document.getElementById("more-menu").classList.contains("active")) {
+                uiTimeout = setTimeout(() => {
+                    document.getElementById("bottom-controls").classList.remove('visible');
+                }, 4000);
+            }
+        }
+        function overlayMessage(msg) {
+            const m = document.getElementById("message");
+            m.innerText = msg;
+            m.style.opacity = "1";
+            clearTimeout(msgTimeout);
+            msgTimeout = setTimeout(() => m.style.opacity = "0", 1000);
+        }
+        function cycleSpeed() {
+            rateIdx = (rateIdx + 1) % rates.length;
+            video.playbackRate = rates[rateIdx];
+            document.getElementById("speed-text").innerText = rates[rateIdx] + "x";
+            updateUIState();
+            overlayMessage(document.getElementById("speed-text").innerText);
+        }
+        async function loadManual() {
+            closeSubmenu();
+            let input = prompt("Enter Video URL:", url || "");
+            if (input) {
+                url = input;
+                location.hash = url;
+                loadPlayer();
+            }
+        }
+        async function loadPlayer() {
+            closeSubmenu();
+            if (!url) return;
+            if (player && player.destroy) player.destroy();
+            const ext = url.split('.').pop().split(/[?#]/)[0].toLowerCase();
+            try {
+                if (ext === 'flv') {
+                    player = flvjs.createPlayer({ type: 'flv', url: url });
+                    player.attachMediaElement(video);
+                    player.load();
+                } else if (ext === 'm3u8' || url.includes('.m3u8')) {
+                    if (Hls.isSupported()) {
+                        player = new Hls();
+                        player.loadSource(url);
+                        player.attachMedia(video);
+                    } else video.src = url;
+                } else if (ext === 'mpd') {
+                    player = dashjs.MediaPlayer().create();
+                    player.initialize(video, url, true);
                 } else video.src = url;
-            } else if (ext === 'mpd') {
-                player = dashjs.MediaPlayer().create();
-                player.initialize(video, url, true);
-            } else video.src = url;
-        } catch (e) {
-            overlayMessage("Error Loading");
-        }
-    }
-
-    window.onload = () => {
-        if (location.hash) {
-            url = location.hash.slice(1);
-            loadPlayer();
-        } else if (url) {
-            loadPlayer();
-        } else {
-            loadManual();
-        }
-    };
-
-    window.onkeydown = (e) => {
-        if (e.key === " ") {
-            e.preventDefault();
-            togglePlay();
-        } else if (e.key.toLowerCase() === "f") {
-            toggleFullScreen();
-        } else if (e.key.toLowerCase() === "l") {
-            loadManual();
-        } else if (e.key.toLowerCase() === "m") {
-            toggleMute();
-        } else if (e.key.toLowerCase() === "r") {
-            loadPlayer();
-        } else if (e.key.toLowerCase() === "s") {
-            cycleSpeed();
-        } else if (e.key >= "0" && e.key <= "9") {
-            const percentage = parseInt(e.key) * 10;
-            const newTime = (video.duration * percentage) / 100;
-            if (!isNaN(newTime)) {
-                video.currentTime = newTime;
-                overlayMessage("Seek to " + percentage + "%");
-            }
-        } else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
-            e.preventDefault();
-            if (e.key === "ArrowLeft") {
-                video.currentTime -= 5;
-                overlayMessage("<< 5s");
-            } else if (e.key === "ArrowRight") {
-                video.currentTime += 5;
-                overlayMessage(">> 5s");
-            } else if (e.key === "ArrowUp") {
-                video.currentTime += 30;
-                overlayMessage(">> 30s");
-            } else if (e.key === "ArrowDown") {
-                video.currentTime -= 30;
-                overlayMessage("<< 30s");
+            } catch (e) {
+                overlayMessage("Error Loading");
             }
         }
-    };
-</script>
+        window.onload = () => {
+            if (location.hash) {
+                url = location.hash.slice(1);
+                loadPlayer();
+            } else if (url) {
+                loadPlayer();
+            } else {
+                loadManual();
+            }
+        };
+        window.onkeydown = (e) => {
+            if (e.key === " ") {
+                e.preventDefault();
+                togglePlay();
+            } else if (e.key.toLowerCase() === "f") {
+                toggleFullScreen();
+            } else if (e.key.toLowerCase() === "l") {
+                loadManual();
+            } else if (e.key.toLowerCase() === "m") {
+                toggleMute();
+            } else if (e.key.toLowerCase() === "r") {
+                loadPlayer();
+            } else if (e.key.toLowerCase() === "s") {
+                cycleSpeed();
+            } else if (e.key >= "0" && e.key <= "9") {
+                const percentage = parseInt(e.key) * 10;
+                const newTime = (video.duration * percentage) / 100;
+                if (!isNaN(newTime)) {
+                    video.currentTime = newTime;
+                    overlayMessage("Seek to " + percentage + "%");
+                }
+            } else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+                e.preventDefault();
+                if (e.key === "ArrowLeft") {
+                    video.currentTime -= 5;
+                    overlayMessage("<< 5s");
+                } else if (e.key === "ArrowRight") {
+                    video.currentTime += 5;
+                    overlayMessage(">> 5s");
+                } else if (e.key === "ArrowUp") {
+                    video.currentTime += 30;
+                    overlayMessage(">> 30s");
+                } else if (e.key === "ArrowDown") {
+                    video.currentTime -= 30;
+                    overlayMessage("<< 30s");
+                }
+            }
+        };
+    </script>
 </body>
 </html>
