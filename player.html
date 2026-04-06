@@ -15,7 +15,7 @@
         body {
             background-color: black;
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: "Segoe UI", sans-serif;
             overflow: hidden;
             color: white;
             -webkit-tap-highlight-color: transparent;
@@ -184,13 +184,14 @@
         let uiTimeout, msgTimeout, player = null;
         const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
         let rateIdx = 0;
+        const container = document.getElementById("player-container");
         const video = document.getElementById("video");
         const seekbar = document.getElementById("seekbar");
         function formatTime(s) {
             const h = Math.floor(s / 3600);
             const m = Math.floor((s % 3600) / 60);
             const sec = Math.floor(s % 60);
-            return h > 0 ? `${h}:${m < 10 ? '0'+m : m}:${sec < 10 ? '0'+sec : sec}` : `${m}:${sec < 10 ? '0'+sec : sec}`;
+            return h > 0 ? `${h}:${m < 10 ? "0"+m : m}:${sec < 10 ? "0"+sec : sec}` : `${m}:${sec < 10 ? "0"+sec : sec}`;
         }
         function togglePlay() {
             if (video.paused) video.play();
@@ -228,27 +229,38 @@
                 const rect = e.currentTarget.getBoundingClientRect();
                 const isUpper = (e.clientY - rect.top) < (rect.height / 2);
                 const amt = isUpper ? 30 : 5;
-                video.currentTime += (side === 'right' ? amt : -amt);
-                overlayMessage(`${side === 'right' ? '>>' : '<<'} ${amt}s`);
+                video.currentTime += (side === "right" ? amt : -amt);
+                overlayMessage(`${side === "right" ? ">>" : "<<"} ${amt}s`);
             } else {
                 toggleUI();
             }
             lastTap = now;
         }
-        video.addEventListener('timeupdate', () => {
+        container.addEventListener("mousemove", () => {
+            const controls = document.getElementById("bottom-controls");
+            if (!controls.classList.contains("visible")) {
+                toggleUI();
+            }
+        });
+        function timeupdate() {
             if (!isNaN(video.duration)) {
                 seekbar.value = (video.currentTime / video.duration) * 100;
                 document.getElementById("curr-time").innerText = formatTime(video.currentTime);
                 document.getElementById("dur-time").innerText = formatTime(video.duration);
             }
+        }
+        video.addEventListener("timeupdate", timeupdate);
+        video.addEventListener("loadeddata", () => {
+            timeupdate();
+            updateUIState();
         });
-        seekbar.addEventListener('input', () => {
+        seekbar.addEventListener("input", () => {
             video.currentTime = (seekbar.value / 100) * video.duration;
         });
         function toggleUI() {
             const controls = document.getElementById("bottom-controls");
-            const show = !controls.classList.contains('visible');
-            controls.classList.toggle('visible', show);
+            const show = !controls.classList.contains("visible");
+            controls.classList.toggle("visible", show);
             if (!show) closeSubmenu();
             if (show) resetUITimer();
         }
@@ -256,7 +268,7 @@
             clearTimeout(uiTimeout);
             if (!document.getElementById("more-menu").classList.contains("active")) {
                 uiTimeout = setTimeout(() => {
-                    document.getElementById("bottom-controls").classList.remove('visible');
+                    document.getElementById("bottom-controls").classList.remove("visible");
                 }, 4000);
             }
         }
@@ -287,19 +299,19 @@
             closeSubmenu();
             if (!url) return;
             if (player && player.destroy) player.destroy();
-            const ext = url.split('.').pop().split(/[?#]/)[0].toLowerCase();
+            const ext = url.split(".").pop().split(/[?#]/)[0].toLowerCase();
             try {
-                if (ext === 'flv') {
-                    player = flvjs.createPlayer({ type: 'flv', url: url });
+                if (ext === "flv") {
+                    player = flvjs.createPlayer({ type: "flv", url: url });
                     player.attachMediaElement(video);
                     player.load();
-                } else if (ext === 'm3u8' || url.includes('.m3u8')) {
+                } else if (ext === "m3u8" || url.includes(".m3u8")) {
                     if (Hls.isSupported()) {
                         player = new Hls();
                         player.loadSource(url);
                         player.attachMedia(video);
                     } else video.src = url;
-                } else if (ext === 'mpd') {
+                } else if (ext === "mpd") {
                     player = dashjs.MediaPlayer().create();
                     player.initialize(video, url, true);
                 } else video.src = url;
