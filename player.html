@@ -184,7 +184,7 @@
         let uiTimeout, msgTimeout, player = null;
         const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
         let rateIdx = 0;
-        const container = document.getElementById("player-container");
+        const middlezone = document.getElementById("middle-zone");
         const video = document.getElementById("video");
         const seekbar = document.getElementById("seekbar");
         function formatTime(s) {
@@ -236,7 +236,7 @@
             }
             lastTap = now;
         }
-        container.addEventListener("mousemove", () => {
+        middlezone.addEventListener("mousemove", () => {
             const controls = document.getElementById("bottom-controls");
             if (!controls.classList.contains("visible")) {
                 toggleUI();
