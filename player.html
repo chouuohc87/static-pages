@@ -236,12 +236,7 @@
             }
             lastTap = now;
         }
-        middlezone.addEventListener("click", () => {
-            const controls = document.getElementById("bottom-controls");
-            if (!controls.classList.contains("visible")) {
-                toggleUI();
-            }
-        });
+        middlezone.addEventListener("click", toggleUI);
         middlezone.addEventListener("mousemove", () => {
             const controls = document.getElementById("bottom-controls");
             if (!controls.classList.contains("visible")) {
