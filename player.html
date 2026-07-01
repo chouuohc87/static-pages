@@ -354,17 +354,37 @@
             } else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
                 e.preventDefault();
                 if (e.key === "ArrowLeft") {
-                    video.currentTime -= 5;
-                    overlayMessage("<< 5s");
+                    if (e.ctrlKey) {
+                        video.currentTime -= 60;
+                        overlayMessage("<< 1m");
+                    } else {
+                        video.currentTime -= 5;
+                        overlayMessage("<< 5s");
+                    }
                 } else if (e.key === "ArrowRight") {
-                    video.currentTime += 5;
-                    overlayMessage(">> 5s");
+                    if (e.ctrlKey) {
+                        video.currentTime += 60;
+                        overlayMessage(">> 1m");
+                    } else {
+                        video.currentTime += 5;
+                        overlayMessage(">> 5s");
+                    }
                 } else if (e.key === "ArrowUp") {
-                    video.currentTime += 30;
-                    overlayMessage(">> 30s");
+                    if (e.ctrlKey) {
+                        video.currentTime += 300;
+                        overlayMessage(">> 5m");
+                    } else {
+                        video.currentTime += 30;
+                        overlayMessage(">> 30s");
+                    }
                 } else if (e.key === "ArrowDown") {
-                    video.currentTime -= 30;
-                    overlayMessage("<< 30s");
+                    if (e.ctrlKey) {
+                        video.currentTime -= 300;
+                        overlayMessage("<< 5m");
+                    } else {
+                        video.currentTime -= 30;
+                        overlayMessage("<< 30s");
+                    }
                 }
             }
         };
