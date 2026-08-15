@@ -20,6 +20,8 @@
             color: white;
             -webkit-tap-highlight-color: transparent;
             height: 100svh; 
+            user-select: none;
+            -webkit-user-select: none;
         }
         #player-container {
             position: relative;
@@ -96,7 +98,6 @@
             accent-color: var(--accent);
             height: 5px;
         }
-        /* Submenu Logic */
         #more-menu {
             position: absolute;
             bottom: 80px;
@@ -137,14 +138,39 @@
             pointer-events: none; opacity: 0; z-index: 20;
             transition: opacity 0.2s;
         }
+        #speed-badge {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 25;
+            backdrop-filter: blur(8px);
+        }
+        #speed-badge.visible {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
     <div id="player-container">
-        <div class="gesture-layer">
-            <div class="touch-zone" onclick="handleTap(event, 'left')"></div>
+        <div id="speed-badge">2X Speed &#9654;&#9654;</div>
+        <div class="gesture-layer" id="gesture-layer">
+            <div class="touch-zone" id="left-zone"></div>
             <div id="middle-zone"></div>
-            <div class="touch-zone" onclick="handleTap(event, 'right')"></div>
+            <div class="touch-zone" id="right-zone"></div>
         </div>
         <video id="video" playsinline></video>
         <div id="more-menu">
@@ -185,8 +211,15 @@
         const rates = [1, 1.25, 1.5, 1.75, 2, 0.25, 0.5, 0.75];
         let rateIdx = 0;
         const middlezone = document.getElementById("middle-zone");
+        const gestureLayer = document.getElementById("gesture-layer");
+        const speedBadge = document.getElementById("speed-badge");
         const video = document.getElementById("video");
         const seekbar = document.getElementById("seekbar");
+        let holdTimer = null;
+        let isHolding = false;
+        let originalRate = 1;
+        const HOLD_DELAY = 200;
+
         function formatTime(s) {
             const h = Math.floor(s / 3600);
             const m = Math.floor((s % 3600) / 60);
@@ -222,6 +255,7 @@
         function closeSubmenu() {
             document.getElementById("more-menu").classList.remove("active");
         }
+
         let lastTap = 0;
         function handleTap(e, side) {
             const now = Date.now();
@@ -236,13 +270,47 @@
             }
             lastTap = now;
         }
-        middlezone.addEventListener("click", toggleUI);
+
+        function startHold(e) {
+            if (e.button !== undefined && e.button !== 0) return;
+            holdTimer = setTimeout(() => {
+                isHolding = true;
+                originalRate = video.playbackRate;
+                video.playbackRate = 2;
+                speedBadge.classList.add("visible");
+                document.getElementById("bottom-controls").classList.remove("visible");
+            }, HOLD_DELAY);
+        }
+
+        function endHold() {
+            clearTimeout(holdTimer);
+            if (isHolding) {
+                isHolding = false;
+                video.playbackRate = originalRate;
+                speedBadge.classList.remove("visible");
+            }
+        }
+
+        gestureLayer.addEventListener("pointerdown", startHold);
+        gestureLayer.addEventListener("pointerup", endHold);
+        gestureLayer.addEventListener("pointercancel", endHold);
+        gestureLayer.addEventListener("pointerleave", endHold);
+        document.getElementById("left-zone").addEventListener("click", (e) => {
+            if (!isHolding) handleTap(e, 'left');
+        });
+        document.getElementById("right-zone").addEventListener("click", (e) => {
+            if (!isHolding) handleTap(e, 'right');
+        });
+        middlezone.addEventListener("click", () => {
+            if (!isHolding) toggleUI();
+        });
         middlezone.addEventListener("mousemove", () => {
             const controls = document.getElementById("bottom-controls");
-            if (!controls.classList.contains("visible")) {
+            if (!controls.classList.contains("visible") && !isHolding) {
                 toggleUI();
             }
         });
+
         function timeupdate() {
             if (!isNaN(video.duration)) {
                 seekbar.value = (video.currentTime / video.duration) * 100;
@@ -283,6 +351,7 @@
         function cycleSpeed() {
             rateIdx = (rateIdx + 1) % rates.length;
             video.playbackRate = rates[rateIdx];
+            originalRate = rates[rateIdx]; // keep track of target speed set by user
             document.getElementById("speed-text").innerText = rates[rateIdx] + "x";
             updateUIState();
             overlayMessage(document.getElementById("speed-text").innerText);
